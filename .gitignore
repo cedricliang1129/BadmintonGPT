@@ -1,0 +1,35 @@
+# 1. 安全與機密檔案 (絕對不能推上 GitHub！)
+.env
+*.pem
+secrets.toml
+
+# 2. Python 編譯出來的暫存檔
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 3. 虛擬環境資料夾 (這些檔案很大，別人 pull 下來再自己裝就好)
+venv/
+env/
+.venv/
+miniconda3/
+
+# 4. 資料庫與本機暫存資料 (避免把測試用的巨量資料推上去)
+*.db
+*.sqlite3
+chroma_db/
+faiss_index/
+*.log
+
+# 5. 影音與圖表大檔案 (如果未來有下載影片測試)
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.png
+
+# 6. 作業系統與開發工具產生的隱藏檔
+.DS_Store
+.vscode/
+.idea/
+__MACOSX/

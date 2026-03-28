@@ -1,0 +1,18 @@
+# Web & API Framework
+fastapi==0.135.2
+uvicorn==0.42.0
+streamlit==1.55.0
+requests==2.33.0
+
+# AI & Multi-Agent Framework
+langchain-core==1.2.23
+langchain-openai==1.1.12
+langchain-google-genai==4.2.1
+langgraph==1.1.3
+
+# Agent Tools & Communication Protocol
+mcp==1.26.0
+
+# Utilities
+pydantic==2.12.5
+python-dotenv==1.2.2
