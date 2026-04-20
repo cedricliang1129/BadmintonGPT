@@ -7,7 +7,7 @@ st.title("🏸 BadmintonGPT 賽事分析助理")
 st.caption("這是一個整合戰術分析、影片問答與數據檢索的多智能體 AI。")
 
 # 設定我們的 FastAPI 後端網址 (確保你的 main.py 有在跑)
-API_URL = "http://127.0.0.1:8000/chat"
+API_URL = "http://127.0.0.1:8080/chat"
 
 # 初始化對話歷史紀錄 (存在 Session State 中)
 if "messages" not in st.session_state:
