@@ -7,6 +7,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing_extensions import TypedDict
 
+from mcp.client.sse import sse_client
+from mcp.client.session import ClientSession
+
 # LangGraph 與 LangChain 相關套件
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -17,7 +20,30 @@ from langchain_openai import ChatOpenAI
 # ==========================================
 # 1. 定義 Tools (封裝你的四個子計畫)
 # ==========================================
-
+@tool
+async def tool_report_coach(query: str) -> str:
+    """
+    子計畫四：羽球數據分析與教練系統。
+    當使用者詢問任何關於失誤、勝率、戰術數據分析的問題時，呼叫此工具。
+    請傳入具體的自然語言問題 (例如：「誰是失誤王？」或「分析殺球數據」)。
+    """
+    # 指向 GoodmintonCoach 的網址 (如果都在同一台電腦先用 localhost)
+    server_url = "http://localhost:8000/sse"
+    
+    print(f"📡 [網路連線] 大腦正在呼叫遠端 ReportCoach，問題：{query}")
+    try:
+        async with sse_client(server_url) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                
+                # 呼叫你 Server 裡註冊的那個 analyze_badminton_data 工具
+                result = await session.call_tool(
+                    "analyze_badminton_data", 
+                    arguments={"query": query}
+                )
+                return result.content[0].text
+    except Exception as e:
+        return f"連線至數據專家 (GoodmintonCoach) 失敗：{e}"
 @tool
 def tool_match_analyzer(video_id: str) -> str:
     """子計畫一：分析整場比賽戰術，或是進行精華剪輯。需要提供影片ID。"""
@@ -36,14 +62,11 @@ def tool_tactics_retriever(query: str) -> str:
     # TODO: 替換為真實 API
     return f"[模擬回傳] 根據查詢「{query}」，找到 2 部相似的不過網失誤影片：[影片A, 影片B]。"
 
-@tool
-def tool_stats_coach(player_name: str) -> str:
-    """子計畫四：單雙打數據分析與教練系統。用來查詢選手的數據面板。"""
-    # TODO: 替換為真實 API
-    return f"[模擬回傳] 選手 {player_name} 的近期勝率為 75%，主要得分手段為殺球。"
+
 
 # 將工具打包成列表
-tools = [tool_match_analyzer, tool_video_qa, tool_tactics_retriever, tool_stats_coach]
+# 將工具打包成列表
+tools = [tool_match_analyzer, tool_video_qa, tool_tactics_retriever, tool_report_coach]
 
 # ==========================================
 # 2. 建立 LangGraph 狀態與 Agent 邏輯
@@ -60,9 +83,10 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0)
 llm_with_tools = llm.bind_tools(tools)
 
 # 定義思考節點 (Agent Node)
-def agent_node(state: State):
-    # 將歷史訊息丟給 LLM，它會決定要回話，還是要呼叫 Tool
-    response = llm_with_tools.invoke(state["messages"])
+# 修改後的寫法 (非同步)
+async def agent_node(state: State):
+    # 加上 async，並把 invoke 改成 await ainvoke
+    response = await llm_with_tools.ainvoke(state["messages"])
     return {"messages": [response]}
 
 # 建立圖 (Graph)
@@ -90,20 +114,15 @@ app = FastAPI(title="BadmintonGPT API", version="0.1.0")
 class ChatRequest(BaseModel):
     user_input: str
 
+# 修改你最下方的 chat_with_agent
 @app.post("/chat")
 async def chat_with_agent(request: ChatRequest):
-    """
-    接收使用者對話，並交由 BadmintonGPT 處理。
-    """
-    # 準備初始狀態
-    initial_state = {"messages": [("user", request.user_input)]}
-    
-    # 執行 Graph (這裡使用 invoke 會等待整個流程跑完才回傳)
-    result = badminton_app.invoke(initial_state)
-    
-    # 取出最後一條訊息 (Agent 的最終回答)
-    final_message = result["messages"][-1].content
-    
-    return {"response": final_message}
-
-# 執行方式：在終端機輸入 uvicorn main:app --reload
+    try:
+        initial_state = {"messages": [("user", request.user_input)]}
+        result = await badminton_app.ainvoke(initial_state)
+        final_message = result["messages"][-1].content
+        return {"response": final_message}
+    except Exception as e:
+        # 把最底層的錯誤印在終端機，並回傳給網頁
+        print(f"❌ 發生致命錯誤: {str(e)}") 
+        return {"response": f"系統發生錯誤，詳細原因: {str(e)}"}
