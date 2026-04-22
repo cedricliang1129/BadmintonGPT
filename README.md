@@ -15,3 +15,8 @@ BadmintonGPT 是一個基於 Multi-Agent 架構的對話式羽球賽事分析系
    ```bash
    git clone <你的_GITHUB_REPO_網址>
    cd BadmintonGPT
+3. Main Agent
+   uvicorn main:app --reload --port 8080
+4. Frontend 
+   streamlit run frontend.py 
+   
